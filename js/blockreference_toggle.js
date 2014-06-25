@@ -1,6 +1,6 @@
 /**
  * @file
- * Some basic behaviors for the Block Reference Toggle fields
+ * Some basic behaviors (browser-side validation) for the Block Reference Toggle fields
  */
 (function ($) {
 
@@ -9,30 +9,17 @@
  */
 Drupal.behaviors.blockreference_toggle = {
   attach: function (context) {
+    // code is intended to do browser side validation on the field edit form UI, on the block reference field to set the Default value
 
+    // for any changes on checkboxes widget
+    $('#edit-field-block-reference-und input').change( function() {
+      _blockreference_toggle_default_value_is_changed($(this));
+
+    });
 
     // for the select list. if a block is selected as the 'Default value'
-    $('#edit-field-block-reference-und').change( function() {
-      console.log('Select list is changed');
-      console.log($('#edit-field-block-reference-und').val());
-
-      // for the select list
-      if ($('#edit-field-block-reference-und').val() === '_none') {
-
-        _blockreference_toggle_trigger_do_not_use_toggle();
-
-      }
-
-      //
-      else {
-        $('.form-item-instance-blockreference-toggle > input').removeAttr('disabled');
-      }
-
-      // for the checkboxes widget - TODO
-      $('input#edit-field-block-reference-und-none').click( function() {
-        console.log('N/A has been clicked on the checkboxes list');
-        _blockreference_toggle_trigger_do_not_use_toggle();
-      });
+    $('select#edit-field-block-reference-und').change( function() {
+      _blockreference_toggle_default_value_is_changed($(this));
 
     });
 
@@ -58,6 +45,35 @@ Drupal.behaviors.blockreference_toggle = {
       }
     });
 
+    // this called when the default value field is changed on the field edit form ui
+    function _blockreference_toggle_default_value_is_changed(obj) {
+      if (obj.val() === '_none') {
+        // disable the blockreference toggle radio buttons
+        _blockreference_toggle_trigger_do_not_use_toggle();
+      }
+      else {
+        // activate the BRT (blockreference toggle) radio buttons
+        $('.form-item-instance-blockreference-toggle > input').removeAttr('disabled');
+
+        // check if the blockreference toggle is switched ON
+        if ($('#edit-instance-blockreference-toggle-default-hide').attr('checked')  || $('#edit-instance-blockreference-toggle-default-show').attr('checked') ) {
+          // untick all checkboxes  and then tick just one checkbox in the field: "Modules defining blocks that can be referenced"
+          _blockreference_toggle_limit_blocks_by_module(obj);
+        }
+      }
+    }
+
+    // untick all checkboxes  and then tick just one checkbox in the field: "Modules defining blocks that can be referenced"
+    function _blockreference_toggle_limit_blocks_by_module(obj) {
+          var moddelta = obj.val().split(':');
+          var module = moddelta[0];
+          var element = '#edit-instance-settings-blockreference-modules-' + module ;
+
+          $('#edit-instance-settings-blockreference-modules  input.form-checkbox').removeAttr('disabled').removeAttr('checked');
+          $(element).attr('checked', 'checked');
+    }
+
+    // uncheck the required field checkbox and reset cardinality to 1
     function _blockreference_toggle_reset_field_instance_settings() {
       //uncheck the required field checkbox and then disable the checkbox
       $('#edit-instance-required').attr('checked', false);
@@ -71,8 +87,24 @@ Drupal.behaviors.blockreference_toggle = {
       if ($('.form-item-field-cardinality > .description > .blockreference-toggle-description-message').length == 0) {
         $('.form-item-field-cardinality > .description').prepend('<span class="blockreference-toggle-description-message"> This is now disabled because the field is configured to use Block Reference Toggle. </span>');
       }
+
+      // TODO set the module for the field  "Modules defining blocks that can be referenced"
+      // for the checkboxes
+      var radio = $('#edit-field-block-reference-und input[type="radio"]:checked');
+      if (radio.length > 0) {
+        var moddelta = radio.attr('value');
+        radio.val(moddelta) ;
+        _blockreference_toggle_limit_blocks_by_module(radio);
+      }
+
+      // for the select list
+      var select_list = $('select#edit-field-block-reference-und');
+      if (select_list.val() > "") {
+        _blockreference_toggle_limit_blocks_by_module(select_list);
+      }
     }
 
+    // function will disable the blockreference toggle radio buttons
     function _blockreference_toggle_trigger_do_not_use_toggle() {
       // trigger the 'Do not use Block Reference Toggle' radio button
       $('#edit-instance-blockreference-toggle-deactivate').trigger('click');

@@ -30,9 +30,6 @@ function blockreference_toggle_field_info_alter(&$info) {
  * This is called on the field edit form
  */
 function blockreference_toggle_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
-  dsm($form['instance']['default_value_widget']);
-  dsm($form['instance']);
-  dsm($form);
   // check if field is of type 'blockreference'
   if ($form['#field']['type'] == 'blockreference') {
     // $field_name = $form['#field']['field_name'];
@@ -116,8 +113,6 @@ function blockreference_toggle_field_widget_form_alter(&$element, &$form_state, 
           $element['#default_value'] = $selected_block;
         }
       }
-
-
   }
 }
 
