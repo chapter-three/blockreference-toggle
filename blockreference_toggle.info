@@ -1,5 +1,5 @@
 name = Block Reference Toggle
-description = Creates  toggle radios to show or hide the default  block
+description = Creates a block reference field that restricts to only one block and  toggles to show or hide the  block on a per node basis. Compatible only with Block Reference 2.0.
 package = Fields
 core = 7.x
 project = "blockreference"
