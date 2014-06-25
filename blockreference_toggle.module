@@ -1,0 +1,124 @@
+<?php
+
+/**
+ * @file
+ * Limits the Block Reference Module select list of blocks to only one block that can be toggled on (displayed) or off (hidden)
+ *
+ * If the site has so many blocks, it might be difficult to look for the one  block that you need.
+ * And if you need only one block to display for a given content type, then this module simplifies the select list on the node edit form
+ * with only 2 choices to 'show' or 'hide' that block.
+ */
+
+
+/**
+ * Implements hook_field_info_alter(&$info).
+ */
+function blockreference_toggle_field_info_alter(&$info) {
+  // Add a setting to this field type 'field_block_reference'
+  foreach ($info as $field_type => &$field_type_info) {
+    if ($field_type == 'blockreference') {
+      $field_type_info += array('instance_settings' => array());
+      $field_type_info['instance_settings'] += array(
+        'blockreference_toggle' => FALSE,
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
+ * This is called on the field edit form
+ */
+function blockreference_toggle_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  dsm($form['instance']['default_value_widget']);
+  dsm($form['instance']);
+  dsm($form);
+  // check if field is of type 'blockreference'
+  if ($form['#field']['type'] == 'blockreference') {
+    // $field_name = $form['#field']['field_name'];
+
+    // add the instance settings form
+    $form['instance']['blockreference_toggle'] = array(
+      '#type' => 'radios',
+      '#title' => t('Convert the list to a toggle radio button on the node edit form.  Limits the options to "hide" and "show" to toggle the block display on or off'),
+      '#description' => t('To enable the radio buttons, a block must be selected as "Default value" above. By selecting "Hide the block" or "Show the block" options, the "Required field" will be unchecked and disabled, and the "Number of values" settings will be reset to "1" and disabled.'),
+      '#default_value' => empty($form['#instance']['blockreference_toggle']) ? NULL : $form['#instance']['blockreference_toggle'],
+      '#options' => array(
+        'deactivate' => 'Do not use Block Reference Toggle',
+        'default_hide' => 'Hide the block as the default field behavior',
+        'default_show' => 'Show the block as the default field behavior',
+      ),
+      '#disabled' => TRUE,
+    );
+
+    // check if the field already is configured to have a default block
+    if (!empty($form['#instance']['default_value'][0]['moddelta'])) {
+      $form['instance']['blockreference_toggle']['#disabled'] = FALSE;
+    }
+
+    // add js file
+    $form['#attached']['js'] = array(drupal_get_path('module', 'blockreference_toggle') . '/js/blockreference_toggle.js');
+  }
+}
+
+
+/**
+ * Implements hook_field_widget_form_alter().
+ * Called on the node edit form
+ */
+function blockreference_toggle_field_widget_form_alter(&$element, &$form_state, $context) {
+
+  // check if the field is a blockreference field
+  if ($context['field']['type'] == 'blockreference') {
+
+    // check if we are on  the field settings edit form -- then dont override anything
+    if (isset($context['form']['#title']) && $context['form']['#title'] == 'Default value'  && empty($context['form']['#node_edit_form'])) {
+      return;
+    }
+    // check if blockreference field is configured to be a toggle radio
+    $choice = $context['instance']['blockreference_toggle'];
+    if (empty($choice) || $choice == 'deactivate') {
+     return;
+    }
+    // yes the field is configured to be a toggle radio
+    else {
+      $field_name = $context['field']['field_name'];
+
+      // this is the selected block
+      $selected_block = $context['instance']['default_value'][0]['moddelta'];
+
+      // turn the select list into  radio buttons
+      $element['#type'] = 'radios';
+
+      //reduce options to just 2 items to serve as the toggle switch
+      $element['#options'] = array(
+        '_none' => 'Hide',
+        $selected_block => 'Show the block: ' . $element['#options'][$selected_block],
+      );
+    }
+
+      // set the default value of the field on the node edit form
+      // but first, check if the node already exists, and therefore, get the default value from the existing field value
+      if ($context['form']['nid']['#value'] > 0) {
+        if (empty($element['#default_value'][0])) {
+          $element['#default_value'] = '_none';
+        }
+        else {
+          $element['#default_value'] = $element['#default_value'][0];
+        }
+      }
+      // the node is new and the field is empty, so get the default value from the field instance settings
+      else {
+        if ($choice == 'default_hide') {
+          $element['#default_value'] = '_none';
+        }
+        else {  // the choice is to show the block by default
+          $element['#default_value'] = $selected_block;
+        }
+      }
+
+
+  }
+}
+
+

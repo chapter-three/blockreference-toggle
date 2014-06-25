@@ -1,0 +1,15 @@
+name = Block Reference Toggle
+description = Creates  toggle radios to show or hide the default  block
+package = Fields
+core = 7.x
+project = "blockreference"
+php = 5.3
+
+files[] = blockreference_toggle.module
+dependencies[] = blockreference
+
+
+; Tell Drupal this dev version is 2.0, for updates
+version = 7.x-2.0-dev-alpha1
+
+
