@@ -6,7 +6,7 @@ project = "blockreference"
 php = 5.3
 
 files[] = blockreference_toggle.module
-dependencies[] = blockreference
+dependencies[] = blockreference (2.0-beta2)
 
 
 ; Tell Drupal this dev version is 2.0, for updates
