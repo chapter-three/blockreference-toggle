@@ -76,7 +76,6 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   //define('BLOCKREFERENCE_TOGGLE_EDIT_MODE', 'edit');
 
   $default_value = '_none';
-  dsm($form);
 
   // check if the entity add/edit form is on the ADD or EDIT mode
   $entity_type = $element['#entity_type'];
@@ -112,10 +111,6 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   }
 
   // get the default display mode
-  dsm($instance);
-  //$instance['default_value'] = empty($instance['default_value']) ? 'hide' : $instance['default_value'];
-  dsm($instance['default_value']);
-
   if (empty($instance['default_value']) || $instance['default_value'][0]['moddelta'] == 'hide') {
     $settings_default_display_mode = 'hide';
   }
@@ -123,8 +118,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   else {
     $settings_default_display_mode = 'show';
   }
-  dsm('love 7878');
-  dsm($settings_default_display_mode.'love');
+
   // start getting the required varirables to build the widget
   $field_name = $field['field_name'];
   $form_id = $form_state['build_info']['form_id'];
@@ -133,8 +127,6 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   if ($entity_edit_mode == 'add') {
     // check if a default block has been configured
     if ($block_configured == TRUE) {
-      dsm('test 9090');
-      dsm($settings_default_display_mode);
       $options = array(
         'hide' => 'Hide',
         'show' => 'Show: '.$block_name,
@@ -143,7 +135,6 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     }
     // a block has not bee configured
     else {
-      dsm($form_state);
       // if we are on the field ui edit form
       if ($form_state['build_info']['form_id'] == 'field_ui_field_edit_form') {
         $options = array(
@@ -231,20 +222,15 @@ function _blockreference_toggle_validate($element, &$form_state, $form) {
   // the selected value is 'show', not 'hide'.
   // Then, set value to the moddelta (which is the actual name of the block and the block delta: example, 'system:main-menu'
   else {
-    dsm($form_state['values']);
-    dsm($form_state['field']);
-    dsm($form_state);
     // if on field ui form the select value is
     // $form_id = 'field_ui_field_edit_form';
     if ($form_id == 'field_ui_field_edit_form') {
-      dsm('on field ui edit form');
     // $selected_value = $form_state['values'][$field_name]['$lang][0]['moddelta'];
       $default_block = $form_state['values']['instance']['widget']['settings']['blockreference_toggle_default_block'];
     }
     // if on node add or edit form
     // then since the selected value is 'show' , then get the default block from the field settings
     else {
-      dsm('on node add or edit form');
       $default_block = $form_state['field'][$field_name][$lang]['instance']['widget']['settings']['blockreference_toggle_default_block'];
     }
     form_set_value($element, $default_block, $form_state);
