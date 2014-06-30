@@ -6,114 +6,278 @@
  *
  * If the site has so many blocks, it might be difficult to look for the one  block that you need.
  * And if you need only one block to display for a given content type, then this module simplifies the select list on the node edit form
- * with only 2 choices to 'show' or 'hide' that block.
+ * with only 2 choices: to 'show' or 'hide' that block.
  */
+
+/**
+ * Implements hook_field_widget_info().
+ * Define the blockereference field widget 'Toggle Radio'
+ */
+function blockreference_toggle_field_widget_info() {
+  return array(
+    'blockreference_toggle_radio' => array(
+      'label' => t('Toggle Radio'),
+      'field types' => array('blockreference'),
+      'settings' => array('number_of_blocks_threshold' => 30),
+      'behaviors' => array(
+        'default value' => FIELD_BEHAVIOR_DEFAULT,
+      ),
+    ),
+  );
+}
 
 
 /**
- * Implements hook_field_info_alter(&$info).
+ * Implements hook_field_widget_settings_form().
  */
-function blockreference_toggle_field_info_alter(&$info) {
-  // Add a setting to this field type 'field_block_reference'
-  foreach ($info as $field_type => &$field_type_info) {
-    if ($field_type == 'blockreference') {
-      $field_type_info += array('instance_settings' => array());
-      $field_type_info['instance_settings'] += array(
-        'blockreference_toggle' => FALSE,
+function blockreference_toggle_field_widget_settings_form($field, $instance) {
+  $widget = $instance['widget'];
+  $settings = $widget['settings'];
+
+  // get all blocks
+  $all_blocks = _blockreference_find_blocks($instance);
+  // format all blocks as 'key' => 'name' as options for checkboxes
+  $options = _blockreference_options($all_blocks);
+
+  // do this only when the widget is of the type 'blockreference_toggle_radio'
+  if ($widget['type'] == 'blockreference_toggle_radio') {
+
+    $form['blockreference_toggle_default_display_mode'] = array(
+      '#type' => 'radios',
+      '#title' => t('The default display mode'),
+      '#default_value' => empty($settings['blockreference_toggle_default_display_mode']) ? 'hide' : $settings['blockreference_toggle_default_display_mode'],
+      '#required' => TRUE,
+      '#options' => array(
+        'hide' => 'Hide',
+        'show' => 'Show',
+      ),
+      '#weight' => 3,
+    );
+
+    // form element for selecting the default block to toggle 'on' or 'off'
+    $form['blockreference_toggle_default_block'] = array(
+      '#type' => 'radios',
+      '#title' => t('The block being referenced and toggled ON or OFF'),
+      '#default_value' => empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'],
+      '#required' => TRUE,
+      '#options' => $options,
+      '#weight' => 4,
+    );
+  }
+  return $form;
+}
+
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  //define('BLOCKREFERENCE_TOGGLE_ADD_MODE', 'add');
+  //define('BLOCKREFERENCE_TOGGLE_EDIT_MODE', 'edit');
+
+  $default_value = '_none';
+  dsm($form);
+
+  // check if the entity add/edit form is on the ADD or EDIT mode
+  $entity_type = $element['#entity_type'];
+  $entity_info = entity_get_info($entity_type);
+  $entity_id_key = $entity_info['entity keys']['id'];
+  if (!isset($element['#entity']->$entity_id_key) || $element['#entity']->$entity_id_key == 0 || empty($element['#entity']->$entity_id_key)) {
+    $entity_edit_mode = 'add';
+  }
+  else {
+    $entity_edit_mode  = 'edit';
+  }
+
+  // get the default display mode from the widget settings -- hook_field_widget_settings_form
+  $settings_default_display_mode = empty($instance['widget']['settings']['blockreference_toggle_default_display_mode']) ? 'hide' : $instance['widget']['settings']['blockreference_toggle_default_display_mode'];
+
+  // get the default block from the widget settings -- hook_field_widget_settings_form
+  // a block has been configured
+  if (!empty($instance['widget']['settings']['blockreference_toggle_default_block'])) {
+    $block_configured = TRUE;
+    $settings_default_block_moddelta =  $instance['widget']['settings']['blockreference_toggle_default_block'];
+    $settings_default_block_moddelta_array = explode(':',$settings_default_block_moddelta);
+    // get the human-readable name of the default block
+    $module = $settings_default_block_moddelta_array[0];
+    $delta = $settings_default_block_moddelta_array[1];
+    $block_obj = _blockreference_block($module, $delta);
+    $block_name = $block_obj->info;
+  }
+  // no block has been configured
+  else {
+    $block_configured = FALSE;
+    $block_name = "No block has been configured yet.";
+    $settings_default_block_moddelta = NULL;
+  }
+
+  // get the default display mode
+  dsm($instance);
+  //$instance['default_value'] = empty($instance['default_value']) ? 'hide' : $instance['default_value'];
+  dsm($instance['default_value']);
+
+  if (empty($instance['default_value']) || $instance['default_value'][0]['moddelta'] == 'hide') {
+    $settings_default_display_mode = 'hide';
+  }
+  // then the value
+  else {
+    $settings_default_display_mode = 'show';
+  }
+  dsm('love 7878');
+  dsm($settings_default_display_mode.'love');
+  // start getting the required varirables to build the widget
+  $field_name = $field['field_name'];
+  $form_id = $form_state['build_info']['form_id'];
+
+  //  if we are on a a node (or any entity) ADD form
+  if ($entity_edit_mode == 'add') {
+    // check if a default block has been configured
+    if ($block_configured == TRUE) {
+      dsm('test 9090');
+      dsm($settings_default_display_mode);
+      $options = array(
+        'hide' => 'Hide',
+        'show' => 'Show: '.$block_name,
       );
+      $widget_default_value  = $settings_default_display_mode;
+    }
+    // a block has not bee configured
+    else {
+      dsm($form_state);
+      // if we are on the field ui edit form
+      if ($form_state['build_info']['form_id'] == 'field_ui_field_edit_form') {
+        $options = array(
+          'hide' => 'Hide',
+          'show' => 'Show',
+        );
+      }
+      // if we are on the node (or any entity) add form
+      else {
+        $options = array(
+        'hide' => 'Hide -- No block has been configured yet.',
+      );
+      }
+      $widget_default_value = 'hide';
+
     }
   }
+
+  //  if we are on a node (or any entity) EDIT form
+  if ($entity_edit_mode == 'edit') {
+    $options = array(
+      'hide' => 'Hide',
+      'show' => 'Show: '.$block_name,
+    );
+    if (empty($items)) {
+      $widget_default_value = 'hide';
+    }
+    else {
+      $widget_default_value = 'show';
+    }
+  }
+
+  // build the widget form
+  $element += array(
+    '#type' => 'radios',
+    '#title' => t('Block Referenced'),
+    '#default_value' => $widget_default_value,
+    '#options' => $options,
+    '#element_validate' => array('_blockreference_toggle_validate'),
+  );
+
+  $element = array('moddelta' => $element);
+  return $element;
 }
+
 
 /**
  * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
  * This is called on the field edit form
  */
 function blockreference_toggle_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
-  // check if field is of type 'blockreference'
-  if ($form['#field']['type'] == 'blockreference') {
-    // $field_name = $form['#field']['field_name'];
 
-    // add the instance settings form
-    $form['instance']['blockreference_toggle'] = array(
-      '#type' => 'radios',
-      '#title' => t('Convert the list to a toggle radio button on the node edit form.  Limits the options to "hide" and "show" to toggle the block display on or off'),
-      '#description' => t('To enable the radio buttons, a block must be selected as "Default value" above. By selecting "Hide the block" or "Show the block" options, the "Required field" will be unchecked and disabled, and the "Number of values" settings will be reset to "1" and disabled.'),
-      '#default_value' => empty($form['#instance']['blockreference_toggle']) ? NULL : $form['#instance']['blockreference_toggle'],
-      '#options' => array(
-        'deactivate' => 'Do not use Block Reference Toggle',
-        'default_hide' => 'Hide the block as the default field behavior',
-        'default_show' => 'Show the block as the default field behavior',
-      ),
-      '#disabled' => TRUE,
-    );
-
-    // check if the field already is configured to have a default block
-    if (!empty($form['#instance']['default_value'][0]['moddelta'])) {
-      $form['instance']['blockreference_toggle']['#disabled'] = FALSE;
-    }
-
-    // add js file
-    $form['#attached']['js'] = array(drupal_get_path('module', 'blockreference_toggle') . '/js/blockreference_toggle.js');
+  // check if field is not of type 'blockreference'
+  if ($form['#field']['type'] != 'blockreference') {
+    return;
   }
-}
+  // check if widget is not a 'Toggle ragio'
+  if ($form['#instance']['widget']['type'] != 'blockreference_toggle_radio') {
+    return;
+  }
 
+  // If on the field ui edit form, then
+  if ($form_id == 'field_ui_field_edit_form') {
+    // remove the checkboxes for the Modules being referenced. we wont be filtering the list
+    unset($form['instance']['settings']['blockreference_modules']);
+  }
+
+  // cardinality should always be 1. We can only toggle 'hide' or 'show' 1 block.
+  $form['field']['cardinality']['#disabled'] = TRUE;
+}
 
 /**
- * Implements hook_field_widget_form_alter().
- * Called on the node edit form
+ * Validate the widget. If the choice is '_none' , then it must be set to NULL so it is not saved to the database
  */
-function blockreference_toggle_field_widget_form_alter(&$element, &$form_state, $context) {
-
-  // check if the field is a blockreference field
-  if ($context['field']['type'] == 'blockreference') {
-
-    // check if we are on  the field settings edit form -- then dont override anything
-    if (isset($context['form']['#title']) && $context['form']['#title'] == 'Default value'  && empty($context['form']['#node_edit_form'])) {
-      return;
+function _blockreference_toggle_validate($element, &$form_state, $form) {
+  $field_name = $element['#field_name'];
+  $lang = $element['#language'];
+  $selected_value = $form_state['values'][$field_name][$lang][0]['moddelta'];
+  $form_id = $form_state['build_info']['form_id'];
+  if ($selected_value == 'hide') {
+    $form_state['values'][$field_name][$lang][0]['moddelta'] = NULL;
+    //$form_state['field'][$field_name][$lang]['instance']['default_value'][0]['moddelta'] = NULL;
+    form_set_value($element, NULL, $form_state);
+  }
+  // the selected value is 'show', not 'hide'.
+  // Then, set value to the moddelta (which is the actual name of the block and the block delta: example, 'system:main-menu'
+  else {
+    dsm($form_state['values']);
+    dsm($form_state['field']);
+    dsm($form_state);
+    // if on field ui form the select value is
+    // $form_id = 'field_ui_field_edit_form';
+    if ($form_id == 'field_ui_field_edit_form') {
+      dsm('on field ui edit form');
+    // $selected_value = $form_state['values'][$field_name]['$lang][0]['moddelta'];
+      $default_block = $form_state['values']['instance']['widget']['settings']['blockreference_toggle_default_block'];
     }
-    // check if blockreference field is configured to be a toggle radio
-    $choice = $context['instance']['blockreference_toggle'];
-    if (empty($choice) || $choice == 'deactivate') {
-     return;
-    }
-    // yes the field is configured to be a toggle radio
+    // if on node add or edit form
+    // then since the selected value is 'show' , then get the default block from the field settings
     else {
-      $field_name = $context['field']['field_name'];
-
-      // this is the selected block
-      $selected_block = $context['instance']['default_value'][0]['moddelta'];
-
-      // turn the select list into  radio buttons
-      $element['#type'] = 'radios';
-
-      //reduce options to just 2 items to serve as the toggle switch
-      $element['#options'] = array(
-        '_none' => 'Hide',
-        $selected_block => 'Show the block: ' . $element['#options'][$selected_block],
-      );
+      dsm('on node add or edit form');
+      $default_block = $form_state['field'][$field_name][$lang]['instance']['widget']['settings']['blockreference_toggle_default_block'];
     }
-
-      // set the default value of the field on the node edit form
-      // but first, check if the node already exists, and therefore, get the default value from the existing field value
-      if ($context['form']['nid']['#value'] > 0) {
-        if (empty($element['#default_value'][0])) {
-          $element['#default_value'] = '_none';
-        }
-        else {
-          $element['#default_value'] = $element['#default_value'][0];
-        }
-      }
-      // the node is new and the field is empty, so get the default value from the field instance settings
-      else {
-        if ($choice == 'default_hide') {
-          $element['#default_value'] = '_none';
-        }
-        else {  // the choice is to show the block by default
-          $element['#default_value'] = $selected_block;
-        }
-      }
+    form_set_value($element, $default_block, $form_state);
   }
 }
 
+/**
+ * Implements hook_field_display_alter()
+ *
+ * Does not render  the field if the saved block value does not match the widget settings block value.
+ * This happens when a block has already been configured and,
+ * then it was changed after some nodes already exist using the old configured block
+ */
+function blockreference_toggle_field_display_alter(&$display, $context) {
+  $field_type = $context['field']['type'];
+  if ($field_type != 'blockreference') {
+    return;
+  }
+  $field_name = $context['field']['field_name'];
 
+  // the field is already hidden or empty
+  $field = $context['entity']->$field_name;
+  if (empty($field)) {
+    return;
+  }
+  // get the field's block value
+  $item_block_value = $field['und'][0]['moddelta'];
+
+  // get the field settings block value
+  $settings_block_value = $context['instance']['widget']['settings']['blockreference_toggle_default_block'];
+  if ( $item_block_value != $settings_block_value) {
+    // do not render the field
+    $display['type'] = NULL;
+    $display['label'] = 'hidden';
+  }
+}

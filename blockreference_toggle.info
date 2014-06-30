@@ -1,5 +1,5 @@
 name = Block Reference Toggle
-description = Creates a block reference field that restricts to only one block and  toggles to show or hide the  block on a per node basis. Compatible only with Block Reference 2.0.
+description = This creates a Block Reference widget called 'Toggle Radio.' It toggles a block to display on (show) or off (hide) on a per node basis. Compatible only with Block Reference 2.0.
 package = Fields
 core = 7.x
 project = "blockreference"
@@ -10,6 +10,6 @@ dependencies[] = blockreference (2.0-beta2)
 
 
 ; Tell Drupal this dev version is 2.0, for updates
-version = 7.x-2.0-dev-alpha1
+version = 7.x-2.0-dev-alpha2
 
 
