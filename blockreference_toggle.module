@@ -42,18 +42,6 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   // do this only when the widget is of the type 'blockreference_toggle_radio'
   if ($widget['type'] == 'blockreference_toggle_radio') {
 
-    $form['blockreference_toggle_default_display_mode'] = array(
-      '#type' => 'radios',
-      '#title' => t('The default display mode'),
-      '#default_value' => empty($settings['blockreference_toggle_default_display_mode']) ? 'hide' : $settings['blockreference_toggle_default_display_mode'],
-      '#required' => TRUE,
-      '#options' => array(
-        'hide' => 'Hide',
-        'show' => 'Show',
-      ),
-      '#weight' => 3,
-    );
-
     // form element for selecting the default block to toggle 'on' or 'off'
     $form['blockreference_toggle_default_block'] = array(
       '#type' => 'radios',
