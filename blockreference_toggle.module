@@ -249,6 +249,11 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
   if ($field_type != 'blockreference') {
     return;
   }
+  // if not a 'Toggle Radio' widget then return
+  if ($context['instance']['widget']['type'] != 'blockreference_toggle_radio') {
+    return;
+  }
+
   $field_name = $context['field']['field_name'];
 
   // the field is already hidden or empty
@@ -256,6 +261,7 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
   if (empty($field)) {
     return;
   }
+
   // get the field's block value
   $item_block_value = $field['und'][0]['moddelta'];
 
