@@ -2,11 +2,15 @@
 
 /**
  * @file
- * Limits the Block Reference Module select list of blocks to only one block that can be toggled on (displayed) or off (hidden)
+ * Creates a widget called 'Toggle Radio' using the the Block Reference field.
+ * This widget will allow only one block being referenced and can  be toggled on ('show') or off ('hide') on a PER NODE (or any entity) basis.
  *
  * If the site has so many blocks, it might be difficult to look for the one  block that you need.
  * And if you need only one block to display for a given content type, then this module simplifies the select list on the node edit form
  * with only 2 choices: to 'show' or 'hide' that block.
+ *
+ * This module uses the 'moddelta' string that was introduced in Block Reference 2.0.
+ * Example of a moddelta string is "system:main-menu." The module is 'system' that created the block and the delta is 'main-menu.'
  */
 
 /**
@@ -34,22 +38,55 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   $widget = $instance['widget'];
   $settings = $widget['settings'];
 
+  // do this only when the widget is of the type 'blockreference_toggle_radio'
+  if ($widget['type'] != 'blockreference_toggle_radio') {
+    return;
+  }
   // get all blocks
   $all_blocks = _blockreference_find_blocks($instance);
   // format all blocks as 'key' => 'name' as options for checkboxes
   $options = _blockreference_options($all_blocks);
+  $number_of_blocks = count($options);
 
-  // do this only when the widget is of the type 'blockreference_toggle_radio'
-  if ($widget['type'] == 'blockreference_toggle_radio') {
+  $blocks_threshold_number = 20;
+  // if number of blocks is greater than a set number, use autocomplete widget
+  $use_autocomplete = FALSE;
+  if ( $number_of_blocks > $blocks_threshold_number ) {
+    $use_autocomplete = TRUE;
+  }
 
-    // form element for selecting the default block to toggle 'on' or 'off'
+  // form element for selecting the default block to toggle 'on' or 'off'
+  $form['blockreference_toggle_default_block'] = array(
+    '#type' => 'radios',
+    '#title' => t('The block being referenced and toggled ON or OFF'),
+    '#default_value' => empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'],
+    '#required' => TRUE,
+    '#options' => $options,
+    '#weight' => 4,
+  );
+
+  // if widget is SET TO USE autocomplete,
+  if ($use_autocomplete == true ) {
+    $moddelta = $settings['blockreference_toggle_default_block'];
+    $block_obj = _blockreference_toggle_get_block_info($moddelta);
+    $block_name = $block_obj->info;
+
+    // get autocompelte string from a given block object
+    $default_value_ac = _blockreference_block_string($block_obj);
+
+    // form element for selecting the default block using autocomplete widget
     $form['blockreference_toggle_default_block'] = array(
-      '#type' => 'radios',
-      '#title' => t('The block being referenced and toggled ON or OFF'),
-      '#default_value' => empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'],
+      '#type' => 'textfield',
+      '#default_value' => '',
+      '#autocomplete_path' => 'blockreference-toggle/autocomplete',
+      '#default_value' =>  $default_value_ac,
+      '#size' => 60,
       '#required' => TRUE,
-      '#options' => $options,
-      '#weight' => 4,
+      '#title' => t('The block being referenced and to be toggled ON or OFF'),
+      '#element_validate' => array('blockreference_toggle_autocomplete_validate'),
+      '#value_callback' => 'blockreference_autocomplete_value',
+      '#weight' => 5,
+      '#description' => t('When the number of blocks on this site exceed %number_of_blocks , this widget will turn from checkboxes to autocomplete. IMPORTANT: Will be set to empty if you enter an invalid string.', array('%number_of_blocks' => $blocks_threshold_number)),
     );
   }
   return $form;
@@ -62,8 +99,6 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
 function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
   //define('BLOCKREFERENCE_TOGGLE_ADD_MODE', 'add');
   //define('BLOCKREFERENCE_TOGGLE_EDIT_MODE', 'edit');
-
-  $default_value = '_none';
 
   // check if the entity add/edit form is on the ADD or EDIT mode
   $entity_type = $element['#entity_type'];
@@ -89,6 +124,9 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     $module = $settings_default_block_moddelta_array[0];
     $delta = $settings_default_block_moddelta_array[1];
     $block_obj = _blockreference_block($module, $delta);
+    $block_name = $block_obj->info;
+
+    $block_obj = _blockreference_toggle_get_block_info($settings_default_block_moddelta);
     $block_name = $block_obj->info;
   }
   // no block has been configured
@@ -121,7 +159,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
       );
       $widget_default_value  = $settings_default_display_mode;
     }
-    // a block has not bee configured
+    // a block has not been configured
     else {
       // if we are on the field ui edit form
       if ($form_state['build_info']['form_id'] == 'field_ui_field_edit_form') {
@@ -167,6 +205,22 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   $element = array('moddelta' => $element);
   return $element;
 }
+
+/**
+ * Helper function to get block info from a moddelta string
+ *
+ */
+function _blockreference_toggle_get_block_info($moddelta = '') {
+    $block_moddelta_array = explode(':', $moddelta);
+    // get the human-readable name of the default block
+    $module = $block_moddelta_array[0];
+    $delta = $block_moddelta_array[1];
+    $block_obj = _blockreference_block($module, $delta);
+    $block_name = $block_obj->info;
+    return $block_obj;
+}
+
+
 
 
 /**
@@ -241,7 +295,7 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
   if ($context['instance']['widget']['type'] != 'blockreference_toggle_radio') {
     return;
   }
-
+  // $display['label'] = NULL;
   $field_name = $context['field']['field_name'];
 
   // the field is already hidden or empty
@@ -260,4 +314,103 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
     $display['type'] = NULL;
     $display['label'] = 'hidden';
   }
+}
+
+
+
+
+
+
+
+/**
+ * Menu callback for the autocomplete results.
+ */
+function blockreference_toggle_autocomplete($search_string) {
+
+  // use Block Reference function to get all blocks, instead of creating another function
+  $instance = NULL;
+  $context = NULL;
+  $blocks = _blockreference_find_blocks($instance, $search_string, $context);
+  $options = _blockreference_options($blocks, TRUE);
+  drupal_json_output($options);
+}
+
+/**
+ * helper function  to get  all blocks in the format of system:main-menu -- Main Menu
+ * TODO: This is a function in progress
+ * The intention is to not include other blocks as option in the selection list.
+ * TODO: Fieldblocks can be included if the field type is a blockreference. This will be redundant. The field is already a block and is being turned into a block by fieldblock.
+ */
+function blockreference_toggle_get_all_blocks($search_string = "") {
+  $all_block_infos = &drupal_static(__FUNCTION__, array());
+
+  // ignore blocks created by these modules. Fieldblock should not be included because
+  //  it is merely converting this field to a block -- which is redundant as this field module is already referencing only blocks.
+  $modules_ignored = array('fieldblock');
+
+  // caching
+  if (empty($all_block_infos)) {
+    $all_block_infos = array();
+    $options = array();
+    foreach (module_implements('block_info') as $module) {
+      if ($blocks = module_invoke($module, 'block_info')) {
+        if (in_array($module, $modules_ignored)) {
+          continue;
+        }
+        foreach ($blocks as $delta => $info) {
+          $moddelta = $module . ':' . $delta;
+          $all_block_infos[$moddelta] = _blockreference_block($module, $delta, $info);
+          $block_obj = $all_block_infos[$moddelta];
+        }
+      }
+    }
+  }
+  $options = _blockreference_options($all_block_infos, TRUE);
+  return $options;
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function blockreference_toggle_menu() {
+  $items = array();
+  $items['blockreference-toggle/autocomplete'] = array(
+    'title' => 'blockreference toggle autocomplete',
+    'page callback' => 'blockreference_toggle_autocomplete',
+    'TODOaccess callback' => 'blockreference_toggle_autocomplete_access',
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * TODO
+ * Menu access callback for the autocomplete path.
+ */
+function blockreference_toggle_autocomplete_access() {
+  return TRUE;
+}
+
+
+/**
+ * Validation callback for a blockreference toggle widget settings autocomplete element.
+ */
+function blockreference_toggle_autocomplete_validate($element, &$form_state, $form) {
+  $value = $element['#value'];
+  // $value is always empty if the user entered an invalid block moddelta string
+  // the field required error will run automatically
+  if (!$value) {
+    form_set_value($element, '', $form_state);
+    return;
+  }
+
+  // although the value has arleady been validated in the form element's '#value_callback' , let's validate again
+  $block_arr = _blockreference_block_from_ac_string($value);
+  if (!$block_arr) {
+    return form_error($element, t('%name: Title mismatch. Please check your selection.', array('%name' => $element['title'])));
+  }
+
+  $moddelta = implode(':', $block_arr);
+  form_set_value($element, $moddelta, $form_state);
 }

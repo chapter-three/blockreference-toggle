@@ -10,13 +10,13 @@ The default block is set on the field settings configuration page.
 
 IMPORTANT: Compatible only with Block Reference 2.0, not 1.0.
 
-
 TO USE
 ==================
 1. Create a field using ‘Block Reference’ as the field type. Select the widget ‘Toggle Radio’
 2. Configure the widget settings as you would any other field.
    a. Set the default value (display mode) to 'hide’ or ’show’
-   b. Set the default block to toggle
+   b. Set the default block to be referenced (as checkboxes widget. If Your site has more than 20 blocks, then the form element turns into an autocomplete widget).
+
 
 ISSUES with Block Reference (not with this module). These issues will not affect this module (BRT).
 ==================
@@ -33,8 +33,8 @@ COMPATIBILITY NOTES
 TO DO
 ==================
 1. Respect Block visibility settings
-2. Autocomplete widget for selecting the block on the field settings configuration page. A threshold must be set to switch from checkboxes to autocomplete widget. Maybe select list too.
-
+2. Remove some blocks that can be referenced. Example: blocks created by fieldblock module from fields that are of type 'blockreference'.
+   A redundant/recursive feature.
 
 AUTHOR/MAINTAINER
 ======================
