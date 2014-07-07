@@ -67,12 +67,19 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
 
   // if widget is SET TO USE autocomplete,
   if ($use_autocomplete == true ) {
-    $moddelta = $settings['blockreference_toggle_default_block'];
-    $block_obj = _blockreference_toggle_get_block_info($moddelta);
-    $block_name = $block_obj->info;
+    $moddelta = empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'];
+    if (empty($moddelta)) {
+      $default_value_ac = '';
+    }
+    else {
+      $block_obj = _blockreference_toggle_get_block_info($moddelta);
+      $block_name = $block_obj->info;
 
-    // get autocompelte string from a given block object
-    $default_value_ac = _blockreference_block_string($block_obj);
+      // get autocompelte string from a given block object
+      $default_value_ac = _blockreference_block_string($block_obj);
+    }
+
+
 
     // form element for selecting the default block using autocomplete widget
     $form['blockreference_toggle_default_block'] = array(
@@ -244,6 +251,7 @@ function blockreference_toggle_form_field_ui_field_edit_form_alter(&$form, &$for
     unset($form['instance']['settings']['blockreference_modules']);
   }
 
+  $form['instance']['required']['#disabled'] = TRUE;
   // cardinality should always be 1. We can only toggle 'hide' or 'show' 1 block.
   $form['field']['cardinality']['#disabled'] = TRUE;
 }
