@@ -91,7 +91,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
       '#required' => TRUE,
       '#title' => t('The block being referenced and to be toggled ON or OFF'),
       '#element_validate' => array('blockreference_toggle_autocomplete_validate'),
-      '#value_callback' => 'blockreference_autocomplete_value',
+      '#xxxvalue_callback' => 'blockreference_autocomplete_value',
       '#weight' => 5,
       '#description' => t('When the number of blocks on this site exceed %number_of_blocks , this widget will turn from checkboxes to autocomplete. IMPORTANT: Will be set to empty if you enter an invalid string.', array('%number_of_blocks' => $blocks_threshold_number)),
     );
@@ -405,20 +405,29 @@ function blockreference_toggle_autocomplete_access() {
  * Validation callback for a blockreference toggle widget settings autocomplete element.
  */
 function blockreference_toggle_autocomplete_validate($element, &$form_state, $form) {
-  $value = $element['#value'];
-  // $value is always empty if the user entered an invalid block moddelta string
-  // the field required error will run automatically
-  if (!$value) {
-    form_set_value($element, '', $form_state);
+  $user_input_value = $element['#value'];
+
+  // get the autocomplete string (title [mod:delta] format) based on user input
+  // this will return only empty or the correct ac string
+  $correct_ac_string  = blockreference_autocomplete_value($element, FALSE, $form_state);
+
+  if (!empty($correct_ac_string)) {
+    // get block info in the form of array given an ac string
+    $block_info = _blockreference_block_from_ac_string($correct_ac_string);
+
+    // the block cannot be found.
+    if (!$block_info) {
+      return form_error($element, t('%name: Block entered is not valid.', array('%name' => $element['#title'])));
+    }
+    // build the moddelta string ('block:1') format based on ac string ('Block Name [block:1]')
+    $moddelta = implode(':', $block_info);
+
+    // set the element value as string in moddelta format:  'block:1'
+    form_set_value($element, $moddelta, $form_state);
     return;
   }
-
-  // although the value has arleady been validated in the form element's '#value_callback' , let's validate again
-  $block_arr = _blockreference_block_from_ac_string($value);
-  if (!$block_arr) {
-    return form_error($element, t('%name: Title mismatch. Please check your selection.', array('%name' => $element['title'])));
+  // the string entered is not valid
+  else {
+    return form_error($element, t('%name: Block entered is not valid.', array('%name' => $element['#title'])));
   }
-
-  $moddelta = implode(':', $block_arr);
-  form_set_value($element, $moddelta, $form_state);
 }
