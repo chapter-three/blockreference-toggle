@@ -49,7 +49,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   $options = _blockreference_options($all_blocks);
   $number_of_blocks = count($options);
 
-  $blocks_threshold_number = 10;
+  $blocks_threshold_number = 20;
   // if number of blocks is greater than a set number, use autocomplete widget
   $use_autocomplete = FALSE;
   if ( $number_of_blocks > $blocks_threshold_number ) {
@@ -68,7 +68,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
 
 
   // if widget is SET TO USE autocomplete,
-  if ($use_autocomplete == true ) {
+  if ($use_autocomplete == TRUE ) {
     $moddelta = empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'];
 
     if (empty($moddelta)) {
@@ -135,7 +135,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   if (!empty($instance['widget']['settings']['blockreference_toggle_default_block'])) {
     $block_configured = TRUE;
     $settings_default_block_moddelta =  $instance['widget']['settings']['blockreference_toggle_default_block'];
-    $settings_default_block_moddelta_array = explode(':',$settings_default_block_moddelta);
+    $settings_default_block_moddelta_array = explode(':', $settings_default_block_moddelta);
 
     // get the human-readable name of the default block
     $module = $settings_default_block_moddelta_array[0];
@@ -187,7 +187,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     if ($block_configured == TRUE) {
       $options = array(
         'hide' => 'Hide',
-        'show' => 'Show: '.$block_name,
+        'show' => 'Show: ' . $block_name,
       );
       $widget_default_value  = $settings_default_display_mode;
     }
@@ -215,7 +215,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   if ($entity_edit_mode == 'edit') {
     $options = array(
       'hide' => 'Hide',
-      'show' => 'Show: '.$block_name,
+      'show' => 'Show: ' . $block_name,
     );
     // TODO verify this code
     if (empty($items)) {
