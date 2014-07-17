@@ -22,7 +22,7 @@ function blockreference_toggle_field_widget_info() {
     'blockreference_toggle_radio' => array(
       'label' => t('Toggle Radio'),
       'field types' => array('blockreference'),
-      'settings' => array('number_of_blocks_threshold' => 30),
+      'settings' => array('number_of_blocks_threshold' => 20),
       'behaviors' => array(
         'default value' => FIELD_BEHAVIOR_DEFAULT,
       ),
@@ -35,6 +35,7 @@ function blockreference_toggle_field_widget_info() {
  * Implements hook_field_widget_settings_form().
  */
 function blockreference_toggle_field_widget_settings_form($field, $instance) {
+  $field_name = $field['field_name'];
   $widget = $instance['widget'];
   $settings = $widget['settings'];
 
@@ -48,7 +49,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   $options = _blockreference_options($all_blocks);
   $number_of_blocks = count($options);
 
-  $blocks_threshold_number = 20;
+  $blocks_threshold_number = 10;
   // if number of blocks is greater than a set number, use autocomplete widget
   $use_autocomplete = FALSE;
   if ( $number_of_blocks > $blocks_threshold_number ) {
@@ -65,34 +66,41 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
     '#weight' => 4,
   );
 
+
   // if widget is SET TO USE autocomplete,
   if ($use_autocomplete == true ) {
     $moddelta = empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'];
+
     if (empty($moddelta)) {
       $default_value_ac = '';
     }
     else {
       $block_obj = _blockreference_toggle_get_block_info($moddelta);
-      $block_name = $block_obj->info;
 
       // get autocompelte string from a given block object
-      $default_value_ac = _blockreference_block_string($block_obj);
+      if (!empty($block_obj)) {
+        $block_name = $block_obj->info;
+        $default_value_ac = _blockreference_block_string($block_obj);
+      }
+      else {
+        $default_value_ac = "";
+      }
     }
 
-
+    unset($form['blockreference_toggle_default_block']);
 
     // form element for selecting the default block using autocomplete widget
     $form['blockreference_toggle_default_block'] = array(
+
       '#type' => 'textfield',
-      '#default_value' => '',
       '#autocomplete_path' => 'blockreference-toggle/autocomplete',
       '#default_value' =>  $default_value_ac,
       '#size' => 60,
       '#required' => TRUE,
+      '#maxlength' => 128,
       '#title' => t('The block being referenced and to be toggled ON or OFF'),
       '#element_validate' => array('blockreference_toggle_autocomplete_validate'),
-      '#xxxvalue_callback' => 'blockreference_autocomplete_value',
-      '#weight' => 5,
+      '#weight' => 10,
       '#description' => t('When the number of blocks on this site exceed %number_of_blocks , this widget will turn from checkboxes to autocomplete. IMPORTANT: Will be set to empty if you enter an invalid string.', array('%number_of_blocks' => $blocks_threshold_number)),
     );
   }
@@ -106,8 +114,9 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
 function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
   //define('BLOCKREFERENCE_TOGGLE_ADD_MODE', 'add');
   //define('BLOCKREFERENCE_TOGGLE_EDIT_MODE', 'edit');
+  $field_name = $field['field_name'];
 
-  // check if the entity add/edit form is on the ADD or EDIT mode
+  // check if we are  on the ADD or EDIT mode
   $entity_type = $element['#entity_type'];
   $entity_info = entity_get_info($entity_type);
   $entity_id_key = $entity_info['entity keys']['id'];
@@ -127,14 +136,25 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     $block_configured = TRUE;
     $settings_default_block_moddelta =  $instance['widget']['settings']['blockreference_toggle_default_block'];
     $settings_default_block_moddelta_array = explode(':',$settings_default_block_moddelta);
+
     // get the human-readable name of the default block
     $module = $settings_default_block_moddelta_array[0];
     $delta = $settings_default_block_moddelta_array[1];
     $block_obj = _blockreference_block($module, $delta);
-    $block_name = $block_obj->info;
 
-    $block_obj = _blockreference_toggle_get_block_info($settings_default_block_moddelta);
-    $block_name = $block_obj->info;
+
+    if (!empty($block_obj)) {
+      $block_name = $block_obj->info;
+
+      $block_obj = _blockreference_toggle_get_block_info($settings_default_block_moddelta);
+      $block_name = $block_obj->info;
+    }
+    else {
+      $block_configured = FALSE;
+      $block_name = "The  block has been deleted or renamed.";
+      $settings_default_block_moddelta = NULL;
+      drupal_set_message( t('The block for field: %field_name has been deleted or renamed.', array('%field_name' => $field_name)), 'error');
+    }
   }
   // no block has been configured
   else {
@@ -147,9 +167,14 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   if (empty($instance['default_value']) || $instance['default_value'][0]['moddelta'] == 'hide') {
     $settings_default_display_mode = 'hide';
   }
-  // then the value
+  // if the default display mode settings is not empty but no block has been configured
   else {
-    $settings_default_display_mode = 'show';
+    if ($block_configured == 1) {
+      $settings_default_display_mode = 'show';
+    }
+    else {
+      $settings_default_display_mode = 'hide';
+    }
   }
 
   // start getting the required varirables to build the widget
@@ -192,12 +217,15 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
       'hide' => 'Hide',
       'show' => 'Show: '.$block_name,
     );
+    // TODO verify this code
     if (empty($items)) {
-      $widget_default_value = 'hide';
+      // $widget_default_value = 'hide';
     }
     else {
-      $widget_default_value = 'show';
+      // $widget_default_value = 'show';
     }
+    //
+    $widget_default_value = $settings_default_display_mode;
   }
 
   // build the widget form
@@ -223,8 +251,14 @@ function _blockreference_toggle_get_block_info($moddelta = '') {
     $module = $block_moddelta_array[0];
     $delta = $block_moddelta_array[1];
     $block_obj = _blockreference_block($module, $delta);
-    $block_name = $block_obj->info;
-    return $block_obj;
+
+    if (empty($block_obj)) {
+      return NULL;
+    }
+    else {
+      //$block_name = $block_obj->info;
+      return $block_obj;
+    }
 }
 
 
@@ -295,6 +329,8 @@ function _blockreference_toggle_validate($element, &$form_state, $form) {
  * then it was changed after some nodes already exist using the old configured block
  */
 function blockreference_toggle_field_display_alter(&$display, $context) {
+
+
   $field_type = $context['field']['type'];
   if ($field_type != 'blockreference') {
     return;
@@ -315,13 +351,17 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
   // get the field's block value
   $item_block_value = $field['und'][0]['moddelta'];
 
-  // get the field settings block value
+  // get the field settings block value. IF they moddelta saved on the field is not the same as one on the settings, do not display
   $settings_block_value = $context['instance']['widget']['settings']['blockreference_toggle_default_block'];
   if ( $item_block_value != $settings_block_value) {
     // do not render the field
     $display['type'] = NULL;
     $display['label'] = 'hidden';
   }
+
+  // TODO check if the block still exists.
+
+  // rocks
 }
 
 
@@ -333,13 +373,14 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
 /**
  * Menu callback for the autocomplete results.
  */
-function blockreference_toggle_autocomplete($search_string) {
+function _blockreference_toggle_autocomplete($search_string = "") {
 
   // use Block Reference function to get all blocks, instead of creating another function
   $instance = NULL;
   $context = NULL;
   $blocks = _blockreference_find_blocks($instance, $search_string, $context);
   $options = _blockreference_options($blocks, TRUE);
+
   drupal_json_output($options);
 }
 
@@ -384,9 +425,10 @@ function blockreference_toggle_get_all_blocks($search_string = "") {
 function blockreference_toggle_menu() {
   $items = array();
   $items['blockreference-toggle/autocomplete'] = array(
-    'title' => 'blockreference toggle autocomplete',
-    'page callback' => 'blockreference_toggle_autocomplete',
-    'TODOaccess callback' => 'blockreference_toggle_autocomplete_access',
+    'title' => 'Blockreference Toggle Autocomplete',
+    'page callback' => '_blockreference_toggle_autocomplete',
+    'access arguments' => array('access content'),
+    'access callback' => '_blockreference_toggle_autocomplete_access',
     'type' => MENU_CALLBACK,
   );
   return $items;
@@ -396,7 +438,7 @@ function blockreference_toggle_menu() {
  * TODO
  * Menu access callback for the autocomplete path.
  */
-function blockreference_toggle_autocomplete_access() {
+function _blockreference_toggle_autocomplete_access() {
   return TRUE;
 }
 
