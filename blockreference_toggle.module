@@ -86,7 +86,6 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
         $default_value_ac = "";
       }
     }
-
     unset($form['blockreference_toggle_default_block']);
 
     // form element for selecting the default block using autocomplete widget
@@ -101,7 +100,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
       '#title' => t('The block being referenced and to be toggled ON or OFF'),
       '#element_validate' => array('blockreference_toggle_autocomplete_validate'),
       '#weight' => 10,
-      '#description' => t('When the number of blocks on this site exceed %number_of_blocks , this widget will turn from checkboxes to autocomplete. IMPORTANT: Will be set to empty if you enter an invalid string.', array('%number_of_blocks' => $blocks_threshold_number)),
+      '#description' => t('When the number of blocks on this site exceed %number_of_blocks , this widget will turn from checkboxes to autocomplete.', array('%number_of_blocks' => $blocks_threshold_number)),
     );
   }
   return $form;
@@ -112,8 +111,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
  * Implements hook_field_widget_form().
  */
 function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
-  //define('BLOCKREFERENCE_TOGGLE_ADD_MODE', 'add');
-  //define('BLOCKREFERENCE_TOGGLE_EDIT_MODE', 'edit');
+
   $field_name = $field['field_name'];
 
   // check if we are  on the ADD or EDIT mode
@@ -135,6 +133,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
   if (!empty($instance['widget']['settings']['blockreference_toggle_default_block'])) {
     $block_configured = TRUE;
     $settings_default_block_moddelta =  $instance['widget']['settings']['blockreference_toggle_default_block'];
+    $settings_default_block_moddelta_unchanged = $settings_default_block_moddelta;
     $settings_default_block_moddelta_array = explode(':', $settings_default_block_moddelta);
 
     // get the human-readable name of the default block
@@ -150,8 +149,9 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
       $block_name = $block_obj->info;
     }
     else {
+
       $block_configured = FALSE;
-      $block_name = "The  block has been deleted or renamed.";
+      $block_name = "The  block has been disabled, deleted or renamed.";
       $settings_default_block_moddelta = NULL;
       drupal_set_message( t('The block for field: %field_name has been deleted or renamed.', array('%field_name' => $field_name)), 'error');
     }
@@ -217,15 +217,28 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
       'hide' => 'Hide',
       'show' => 'Show: ' . $block_name,
     );
-    // TODO verify this code
-    if (empty($items)) {
-      // $widget_default_value = 'hide';
+
+    // if a value already exists in the node field
+    if (!empty($items[0]['moddelta'])) {
+      $existing_widget_value = $items[0]['moddelta'];
+      $widget_default_value ='show';
+
+      // IMPORTANT: the settings default value does not match the entity widget value, at least indicate that on the node edit form
+      if ($settings_default_block_moddelta != $existing_widget_value) {
+        // it is possible that the settings default and entity field value actually match, but the block may have been renamed or deleted -- that is already accounted for.
+        // Hence we account for when there is a real mismatch in the default value vs item value
+        if ($settings_default_block_moddelta_unchanged != $existing_widget_value) {
+          $options['show'] = $options['show'] . '-- NOTE! This block does not match the default block in the field settings. You can save this form now to display the new block or you change the settings default block.';
+        }
+        // the values match , but the block is no longer valid
+        else {
+          $options['show'] = 'No Block -- NOTE! This block is no longer valid. You must change the default block AND then go back to this form and save in order for  new block to display.';
+        }
+      }
     }
     else {
-      // $widget_default_value = 'show';
+      $widget_default_value = 'hide';
     }
-    //
-    $widget_default_value = $settings_default_display_mode;
   }
 
   // build the widget form
