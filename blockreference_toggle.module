@@ -15,6 +15,7 @@
 
 /**
  * Implements hook_field_widget_info().
+ *
  * Define the blockereference field widget 'Toggle Radio'
  */
 function blockreference_toggle_field_widget_info() {
@@ -39,24 +40,20 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   $widget = $instance['widget'];
   $settings = $widget['settings'];
 
-  // do this only when the widget is of the type 'blockreference_toggle_radio'
-  if ($widget['type'] != 'blockreference_toggle_radio') {
-    return;
-  }
-  // get all blocks
+  // Get all blocks.
   $all_blocks = _blockreference_find_blocks($instance);
-  // format all blocks as 'key' => 'name' as options for checkboxes
+  // Format all blocks as 'key' => 'name' as options for checkboxes.
   $options = _blockreference_options($all_blocks);
   $number_of_blocks = count($options);
 
   $blocks_threshold_number = 20;
-  // if number of blocks is greater than a set number, use autocomplete widget
+  // If number of blocks is greater than a set number, use autocomplete widget.
   $use_autocomplete = FALSE;
   if ( $number_of_blocks > $blocks_threshold_number ) {
     $use_autocomplete = TRUE;
   }
 
-  // form element for selecting the default block to toggle 'on' or 'off'
+  // Form element for selecting the default block to toggle 'on' or 'off'.
   $form['blockreference_toggle_default_block'] = array(
     '#type' => 'radios',
     '#title' => t('The block being referenced and toggled ON or OFF'),
@@ -67,7 +64,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   );
 
 
-  // if widget is SET TO USE autocomplete,
+  // If widget is SET TO USE autocomplete.
   if ($use_autocomplete == TRUE ) {
     $moddelta = empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'];
 
@@ -77,7 +74,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
     else {
       $block_obj = _blockreference_toggle_get_block_info($moddelta);
 
-      // get autocompelte string from a given block object
+      // Get autocompelte string from a given block object.
       if (!empty($block_obj)) {
         $block_name = $block_obj->info;
         $default_value_ac = _blockreference_block_string($block_obj);
@@ -88,7 +85,7 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
     }
     unset($form['blockreference_toggle_default_block']);
 
-    // form element for selecting the default block using autocomplete widget
+    // Form element for selecting the default block using autocomplete widget.
     $form['blockreference_toggle_default_block'] = array(
 
       '#type' => 'textfield',
@@ -114,7 +111,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
 
   $field_name = $field['field_name'];
 
-  // check if we are  on the ADD or EDIT mode
+  // Check if we are  on the ADD or EDIT mode.
   $entity_type = $element['#entity_type'];
   $entity_info = entity_get_info($entity_type);
   $entity_id_key = $entity_info['entity keys']['id'];
@@ -125,18 +122,18 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     $entity_edit_mode  = 'edit';
   }
 
-  // get the default display mode from the widget settings -- hook_field_widget_settings_form
+  // Get the default display mode from the field widget settings
   $settings_default_display_mode = empty($instance['widget']['settings']['blockreference_toggle_default_display_mode']) ? 'hide' : $instance['widget']['settings']['blockreference_toggle_default_display_mode'];
 
-  // get the default block from the widget settings -- hook_field_widget_settings_form
-  // a block has been configured
+  // Get the default block as moddelta string from the widget settings.
+  // If a block has been configured.
   if (!empty($instance['widget']['settings']['blockreference_toggle_default_block'])) {
     $block_configured = TRUE;
     $settings_default_block_moddelta =  $instance['widget']['settings']['blockreference_toggle_default_block'];
     $settings_default_block_moddelta_unchanged = $settings_default_block_moddelta;
     $settings_default_block_moddelta_array = explode(':', $settings_default_block_moddelta);
 
-    // get the human-readable name of the default block
+    // Get the human-readable name of the default block.
     $module = $settings_default_block_moddelta_array[0];
     $delta = $settings_default_block_moddelta_array[1];
     $block_obj = _blockreference_block($module, $delta);
@@ -156,18 +153,18 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
       drupal_set_message( t('The block for field: %field_name has been deleted or renamed.', array('%field_name' => $field_name)), 'error');
     }
   }
-  // no block has been configured
+  // No block has been configured.
   else {
     $block_configured = FALSE;
     $block_name = "No block has been configured yet.";
     $settings_default_block_moddelta = NULL;
   }
 
-  // get the default display mode
+  // Get the default display mode.
   if (empty($instance['default_value']) || $instance['default_value'][0]['moddelta'] == 'hide') {
     $settings_default_display_mode = 'hide';
   }
-  // if the default display mode settings is not empty but no block has been configured
+  // If the default display mode settings is not empty but no block has been configured.
   else {
     if ($block_configured == 1) {
       $settings_default_display_mode = 'show';
@@ -177,11 +174,11 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     }
   }
 
-  // start getting the required varirables to build the widget
+  // Start getting the required varirables to build the widget.
   $field_name = $field['field_name'];
   $form_id = $form_state['build_info']['form_id'];
 
-  //  if we are on a a node (or any entity) ADD form
+  //  If we are on  a node (or any entity) ADD form.
   if ($entity_edit_mode == 'add') {
     // check if a default block has been configured
     if ($block_configured == TRUE) {
@@ -211,26 +208,26 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     }
   }
 
-  //  if we are on a node (or any entity) EDIT form
+  //  If we are on a node (or any entity) EDIT form.
   if ($entity_edit_mode == 'edit') {
     $options = array(
       'hide' => 'Hide',
       'show' => 'Show: ' . $block_name,
     );
 
-    // if a value already exists in the node field
+    // If a value already exists in the node field.
     if (!empty($items[0]['moddelta'])) {
       $existing_widget_value = $items[0]['moddelta'];
       $widget_default_value ='show';
 
-      // IMPORTANT: the settings default value does not match the entity widget value, at least indicate that on the node edit form
+      // IMPORTANT: The settings default value does not match the entity widget value, at least indicate that on the node edit form.
       if ($settings_default_block_moddelta != $existing_widget_value) {
-        // it is possible that the settings default and entity field value actually match, but the block may have been renamed or deleted -- that is already accounted for.
-        // Hence we account for when there is a real mismatch in the default value vs item value
+        // It is possible that the widget settings default and entity field value actually match, but the block may have been renamed or deleted -- but, that is already accounted for.
+        // Hence, we account for when there is a real mismatch in the widget settings default value vs entity field value.
         if ($settings_default_block_moddelta_unchanged != $existing_widget_value) {
           $options['show'] = $options['show'] . '-- NOTE! This block does not match the default block in the field settings. You can save this form now to display the new block or you change the settings default block.';
         }
-        // the values match , but the block is no longer valid
+        // The values match , but the block is no longer valid.
         else {
           $options['show'] = 'No Block -- NOTE! This block is no longer valid. You must change the default block AND then go back to this form and save in order for  new block to display.';
         }
@@ -241,7 +238,7 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
     }
   }
 
-  // build the widget form
+  // Build the widget form.
   $element += array(
     '#type' => 'radios',
     '#title' => t('Block Referenced'),
@@ -255,12 +252,12 @@ function blockreference_toggle_field_widget_form(&$form, &$form_state, $field, $
 }
 
 /**
- * Helper function to get block info from a moddelta string
+ * Helper function to get block info from a moddelta string.
  *
  */
 function _blockreference_toggle_get_block_info($moddelta = '') {
     $block_moddelta_array = explode(':', $moddelta);
-    // get the human-readable name of the default block
+    // Get the human-readable name of the default block.
     $module = $block_moddelta_array[0];
     $delta = $block_moddelta_array[1];
     $block_obj = _blockreference_block($module, $delta);
@@ -269,7 +266,6 @@ function _blockreference_toggle_get_block_info($moddelta = '') {
       return NULL;
     }
     else {
-      //$block_name = $block_obj->info;
       return $block_obj;
     }
 }
@@ -279,32 +275,33 @@ function _blockreference_toggle_get_block_info($moddelta = '') {
 
 /**
  * Implements hook_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id).
+ *
  * This is called on the field edit form
  */
 function blockreference_toggle_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
 
-  // check if field is not of type 'blockreference'
+  // Check if field is not of type 'blockreference.'
   if ($form['#field']['type'] != 'blockreference') {
     return;
   }
-  // check if widget is not a 'Toggle ragio'
+
+  // Check if widget is not a 'Toggle ragio.'
   if ($form['#instance']['widget']['type'] != 'blockreference_toggle_radio') {
     return;
   }
 
-  // If on the field ui edit form, then
+  // If on the field ui edit form, then remove the checkboxes for the Modules being referenced. We wont be filtering the list.
   if ($form_id == 'field_ui_field_edit_form') {
-    // remove the checkboxes for the Modules being referenced. we wont be filtering the list
-    unset($form['instance']['settings']['blockreference_modules']);
+    $form['instance']['settings']['blockreference_modules']['#access'] = FALSE;
   }
-
+  // The field can be set to empty, hence it cannot be required.
   $form['instance']['required']['#disabled'] = TRUE;
-  // cardinality should always be 1. We can only toggle 'hide' or 'show' 1 block.
+  // Cardinality should always be 1. We can only toggle 'hide' or 'show' 1 block.
   $form['field']['cardinality']['#disabled'] = TRUE;
 }
 
 /**
- * Validate the widget. If the choice is '_none' , then it must be set to NULL so it is not saved to the database
+ * Validates the widget. If the choice is '_none' , then it must be set to NULL so it is not saved to the database
  */
 function _blockreference_toggle_validate($element, &$form_state, $form) {
   $field_name = $element['#field_name'];
@@ -313,20 +310,17 @@ function _blockreference_toggle_validate($element, &$form_state, $form) {
   $form_id = $form_state['build_info']['form_id'];
   if ($selected_value == 'hide') {
     $form_state['values'][$field_name][$lang][0]['moddelta'] = NULL;
-    //$form_state['field'][$field_name][$lang]['instance']['default_value'][0]['moddelta'] = NULL;
     form_set_value($element, NULL, $form_state);
   }
-  // the selected value is 'show', not 'hide'.
-  // Then, set value to the moddelta (which is the actual name of the block and the block delta: example, 'system:main-menu'
+  // If the selected value is 'show', not 'hide',
+  // then set value to the moddelta (which is the actual name of the block and the block delta: example, 'system:main-menu.'
   else {
-    // if on field ui form the select value is
-    // $form_id = 'field_ui_field_edit_form';
+    // Get the default block value.
     if ($form_id == 'field_ui_field_edit_form') {
-    // $selected_value = $form_state['values'][$field_name]['$lang][0]['moddelta'];
       $default_block = $form_state['values']['instance']['widget']['settings']['blockreference_toggle_default_block'];
     }
-    // if on node add or edit form
-    // then since the selected value is 'show' , then get the default block from the field settings
+    // If on node add or edit form, and selected value is show,
+    // then get the default block from the field settings.
     else {
       $default_block = $form_state['field'][$field_name][$lang]['instance']['widget']['settings']['blockreference_toggle_default_block'];
     }
@@ -343,38 +337,33 @@ function _blockreference_toggle_validate($element, &$form_state, $form) {
  */
 function blockreference_toggle_field_display_alter(&$display, $context) {
 
-
   $field_type = $context['field']['type'];
   if ($field_type != 'blockreference') {
     return;
   }
-  // if not a 'Toggle Radio' widget then return
+  // If not a 'Toggle Radio' widget then do nothing.
   if ($context['instance']['widget']['type'] != 'blockreference_toggle_radio') {
     return;
   }
-  // $display['label'] = NULL;
   $field_name = $context['field']['field_name'];
 
-  // the field is already hidden or empty
+  // If the field is already hidden or empty, do nothing.
   $field = $context['entity']->$field_name;
   if (empty($field)) {
     return;
   }
 
-  // get the field's block value
-  $item_block_value = $field['und'][0]['moddelta'];
+  // Get the entity field's current block value.
+  $lang = $context['entity']->language;
+  $item_block_value = $field[$lang][0]['moddelta'];
 
-  // get the field settings block value. IF they moddelta saved on the field is not the same as one on the settings, do not display
+  // Get the field settings block value. If the moddelta saved on the field is not the same as one on the settings, do not display.
   $settings_block_value = $context['instance']['widget']['settings']['blockreference_toggle_default_block'];
   if ( $item_block_value != $settings_block_value) {
-    // do not render the field
     $display['type'] = NULL;
     $display['label'] = 'hidden';
   }
 
-  // TODO check if the block still exists.
-
-  // rocks
 }
 
 
@@ -388,7 +377,7 @@ function blockreference_toggle_field_display_alter(&$display, $context) {
  */
 function _blockreference_toggle_autocomplete($search_string = "") {
 
-  // use Block Reference function to get all blocks, instead of creating another function
+  // Use Block Reference function to get all blocks, instead of creating another function.
   $instance = NULL;
   $context = NULL;
   $blocks = _blockreference_find_blocks($instance, $search_string, $context);
@@ -399,18 +388,20 @@ function _blockreference_toggle_autocomplete($search_string = "") {
 
 /**
  * helper function  to get  all blocks in the format of system:main-menu -- Main Menu
+ *
  * TODO: This is a function in progress
- * The intention is to not include other blocks as option in the selection list.
+ * The intention is to not include other blocks as options in the selection list.
  * TODO: Fieldblocks can be included if the field type is a blockreference. This will be redundant. The field is already a block and is being turned into a block by fieldblock.
+ * TODO: Or maybe am wrong. Maybe fieldblocks can still be included so that the node view can set the context to hide or display the fieldblock, but the fieldblock is placed in another region.
  */
 function blockreference_toggle_get_all_blocks($search_string = "") {
   $all_block_infos = &drupal_static(__FUNCTION__, array());
 
-  // ignore blocks created by these modules. Fieldblock should not be included because
-  //  it is merely converting this field to a block -- which is redundant as this field module is already referencing only blocks.
+  // Ignore blocks created by these modules. Fieldblock should not be included because
+  // it is merely converting this field to a block -- which is redundant as this field module is already referencing only blocks.
   $modules_ignored = array('fieldblock');
 
-  // caching
+  // Caching.
   if (empty($all_block_infos)) {
     $all_block_infos = array();
     $options = array();
@@ -457,31 +448,31 @@ function _blockreference_toggle_autocomplete_access() {
 
 
 /**
- * Validation callback for a blockreference toggle widget settings autocomplete element.
+ * Validation callback for the blockreference toggle widget settings autocomplete element.
  */
 function blockreference_toggle_autocomplete_validate($element, &$form_state, $form) {
   $user_input_value = $element['#value'];
 
-  // get the autocomplete string (title [mod:delta] format) based on user input
-  // this will return only empty or the correct ac string
+  // Get the autocomplete string (title [mod:delta] format) based on user input.
+  // This will return only empty or the correct ac string.
   $correct_ac_string  = blockreference_autocomplete_value($element, FALSE, $form_state);
 
   if (!empty($correct_ac_string)) {
-    // get block info in the form of array given an ac string
+    // Get block info in the form of array with an ac string as the argument.
     $block_info = _blockreference_block_from_ac_string($correct_ac_string);
 
-    // the block cannot be found.
+    // The block cannot be found.
     if (!$block_info) {
       return form_error($element, t('%name: Block entered is not valid.', array('%name' => $element['#title'])));
     }
-    // build the moddelta string ('block:1') format based on ac string ('Block Name [block:1]')
+    // Build the moddelta string ('block:1') format based on ac string ('Block Name [block:1]').
     $moddelta = implode(':', $block_info);
 
-    // set the element value as string in moddelta format:  'block:1'
+    // Set the element value as string in moddelta format:  'block:1'.
     form_set_value($element, $moddelta, $form_state);
     return;
   }
-  // the string entered is not valid
+  // The string entered is not valid.
   else {
     return form_error($element, t('%name: Block entered is not valid.', array('%name' => $element['#title'])));
   }
