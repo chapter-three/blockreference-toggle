@@ -47,25 +47,25 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
   $number_of_blocks = count($options);
 
   $blocks_threshold_number = 20;
-  // If number of blocks is greater than a set number, use autocomplete widget.
+  // If number of blocks is greater than a set threshold number, use autocomplete widget.
   $use_autocomplete = FALSE;
-  if ( $number_of_blocks > $blocks_threshold_number ) {
-    $use_autocomplete = TRUE;
-  }
+  $use_autocomplete = ( $number_of_blocks > $blocks_threshold_number ) ? TRUE : FALSE;
+
 
   // Form element for selecting the default block to toggle 'on' or 'off'.
-  $form['blockreference_toggle_default_block'] = array(
-    '#type' => 'radios',
-    '#title' => t('The block being referenced and toggled ON or OFF'),
-    '#default_value' => empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'],
-    '#required' => TRUE,
-    '#options' => $options,
-    '#weight' => 4,
-  );
-
+  if ($use_autocomplete == FALSE ) {
+    $form['blockreference_toggle_default_block'] = array(
+      '#type' => 'radios',
+      '#title' => t('The block being referenced and toggled ON or OFF'),
+      '#default_value' => empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'],
+      '#required' => TRUE,
+      '#options' => $options,
+      '#weight' => 4,
+    );
+  }
 
   // If widget is SET TO USE autocomplete.
-  if ($use_autocomplete == TRUE ) {
+  else {
     $moddelta = empty($settings['blockreference_toggle_default_block']) ? NULL : $settings['blockreference_toggle_default_block'];
 
     if (empty($moddelta)) {
@@ -83,7 +83,6 @@ function blockreference_toggle_field_widget_settings_form($field, $instance) {
         $default_value_ac = "";
       }
     }
-    unset($form['blockreference_toggle_default_block']);
 
     // Form element for selecting the default block using autocomplete widget.
     $form['blockreference_toggle_default_block'] = array(
@@ -439,7 +438,8 @@ function blockreference_toggle_menu() {
 }
 
 /**
- * TODO
+ * TODO:
+ *
  * Menu access callback for the autocomplete path.
  */
 function _blockreference_toggle_autocomplete_access() {
@@ -449,6 +449,7 @@ function _blockreference_toggle_autocomplete_access() {
 
 /**
  * Validation callback for the blockreference toggle widget settings autocomplete element.
+ *
  */
 function blockreference_toggle_autocomplete_validate($element, &$form_state, $form) {
   $user_input_value = $element['#value'];
