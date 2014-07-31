@@ -38,10 +38,7 @@ INSTALLATION
 
 CONFIGURATION
 -------------
- * Customize the menu settings in Administration » Configuration and modules »
-   Administration » Administration menu.
- * To prevent administrative menu items from appearing twice, you may hide the
-   "Management" menu block.
+ * TO DO
 
 
 USAGE
